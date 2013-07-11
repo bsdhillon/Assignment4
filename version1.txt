@@ -1,0 +1,91 @@
+'''
+Created on 2013-07-10
+ 
+@author: balwinder
+'''
+""" mail pilot 
+    first complete arcade game
+    fly plane with mouse
+    deliver mail to islands,
+    avoid thunderstorms. 
+     
+    mpIsland - add island sprite
+     
+    """
+     
+import pygame, random
+pygame.init()
+ 
+screen = pygame.display.set_mode((640, 480))
+ 
+class Bike(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load("plane.gif")
+        self.image = self.image.convert()
+        self.rect = self.image.get_rect()
+    def update(self):
+        mx,my = pygame.mouse.get_pos()
+        self.rect.center = (590,my)
+ 
+class Road(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load("road.gif")
+        self.rect = self.image.get_rect()
+        self.dy = 6
+        self.reset()
+         
+    def update(self):
+        self.rect.right += self.dy
+        if self.rect.left >= 0:
+            self.reset()
+             
+    def reset(self):
+        self.rect.right = screen.get_width()
+ 
+ 
+     
+ 
+def initialScreen(score):
+    pygame.display.set_caption("Super Bike")
+    road = Road()
+    bike = Bike()
+    #allSprites = pygame.sprite.Group(road)
+    allSprites = pygame.sprite.OrderedUpdates(road, bike)
+    keepGoing = True
+    clock = pygame.time.Clock()
+    pygame.mouse.set_visible(False)
+    while keepGoing:
+        clock.tick(30)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                keepGoing = False
+                playGame = True
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                keepGoing = False
+                playGame = False 
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    keepGoing = False
+                    playGame = True
+     
+        allSprites.update()
+        allSprites.draw(screen)
+        pygame.display.flip()
+         
+    #bike.sndEngine.stop()    
+    pygame.mouse.set_visible(True)
+    return playGame
+         
+def main():
+    playGame = False
+    score = 0
+    while not playGame:
+        playGame = initialScreen(score)
+         
+ 
+if __name__ == "__main__":
+    main()
+     
+     
