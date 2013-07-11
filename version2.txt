@@ -1,0 +1,206 @@
+'''
+Created on 2013-07-10
+ 
+@author: balwinder
+'''
+""" mail pilot 
+    first complete arcade game
+    fly plane with mouse
+    deliver mail to islands,
+    avoid thunderstorms. 
+     
+    mpIsland - add island sprite
+     
+    """
+     
+import pygame, random
+pygame.init()
+ 
+screen = pygame.display.set_mode((640, 480))
+
+class Fuel(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load("fuel.gif").convert()
+        self.rect = self.image.get_rect()
+        self.reset()
+        self.dx = 5
+    
+    def update(self):
+        self.rect.centerx += self.dx
+        if self.rect.left > screen.get_width():
+            self.reset()
+            
+    def reset(self):
+        self.rect.left = 0
+        self.rect.centery = random.randrange(0, screen.get_width())
+ 
+class Bike(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load("player.gif")
+        self.image = self.image.convert()
+        self.rect = self.image.get_rect()
+    def update(self):
+        mx,my = pygame.mouse.get_pos()
+        self.rect.center = (590,my)
+
+class Car(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        imageArray = [pygame.image.load("truck.gif"),pygame.image.load("truck1.gif"),pygame.image.load("truck3.gif")]
+        self.image = imageArray[random.randrange(0,2)]
+        self.image = self.image.convert()
+        self.rect = self.image.get_rect()
+        self.reset()
+    
+    def update(self):
+        self.rect.centerx += self.dx
+        #self.rect.centery += self.dy
+        if self.rect.left > screen.get_width():
+            self.reset()
+            
+    def reset(self):
+        self.rect.left = 0
+        self.rect.centery = random.randrange(0, screen.get_height())
+        self.dx = random.randrange(2,5)
+        self.dy = random.randrange(-5,10)
+
+class Scorecard(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.health = 100
+        self.score = 0
+        self.font = pygame.font.SysFont("None", 50)
+        
+    def update(self):
+        self.text = "Health: %d, Score: %d" % (self.health, self.score)
+        self.image = self.font.render(self.text, 1, (255, 255, 0))
+        self.rect = self.image.get_rect()
+class Road(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load("road.gif")
+        self.rect = self.image.get_rect()
+        self.dy = 6
+        self.reset()
+         
+    def update(self):
+        self.rect.right += self.dy
+        if self.rect.left >= 0:
+            self.reset()
+             
+    def reset(self):
+        self.rect.right = screen.get_width()
+ 
+ 
+     
+ 
+def initialScreen(score):
+    pygame.display.set_caption("Super Bike")
+    road = Road()
+    bike = Bike()
+    #allSprites = pygame.sprite.Group(road)
+    allSprites = pygame.sprite.OrderedUpdates(road, bike)
+    insFont = pygame.font.SysFont(None, 50)
+    insLabels = []
+    instructions = (
+    "Super Bike.     Last score: %d" % score ,
+    "Instructions:  You are on a Super Bike,",
+    "speeding on the highway",
+    "",
+    "but be careful of the cops",    
+    "avoid hitting other vehicles",
+    "",
+    "good luck!",
+    "",
+    "click to start, escape to quit..."
+    )
+    
+    for line in instructions:
+        tempLabel = insFont.render(line, 1, (255, 255, 0))
+        insLabels.append(tempLabel)
+
+    keepGoing = True
+    clock = pygame.time.Clock()
+    pygame.mouse.set_visible(False)
+    while keepGoing:
+        clock.tick(30)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                keepGoing = False
+                playGame = True
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                keepGoing = False
+                playGame = False 
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    keepGoing = False
+                    playGame = True
+     
+        allSprites.update()
+        allSprites.draw(screen)
+        for i in range(len(insLabels)):
+            screen.blit(insLabels[i], (50, 30*i))
+
+        pygame.display.flip()
+         
+    #bike.sndEngine.stop()    
+    pygame.mouse.set_visible(True)
+    return playGame
+def game():
+    pygame.display.set_caption("Mail Pilot!")
+
+    background = pygame.Surface(screen.get_size())
+    background.fill((0, 0, 0))
+    screen.blit(background, (0, 0))
+    road = Road()
+    bike = Bike()
+    scorecard = Scorecard()
+    car = Car()
+    car1 = Car()
+    car2 = Car()
+    fuel = Fuel()
+    enemySprites = pygame.sprite.Group(car, car1, car2)
+    friendSprites = pygame.sprite.OrderedUpdates(road, bike,scorecard,fuel)
+    keepGoing = True
+    clock = pygame.time.Clock()
+    pygame.mouse.set_visible(False)
+    while keepGoing:
+        clock.tick(30)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                keepGoing = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    keepGoing = False
+        if bike.rect.colliderect(fuel.rect):
+            fuel.reset()
+            scorecard.score += 100
+
+        hitClouds = pygame.sprite.spritecollide(bike, enemySprites, False)
+        if hitClouds:
+            scorecard.health -= 10
+            if scorecard.health <= 0:
+                keepGoing = False
+            for theCloud in hitClouds:
+                theCloud.reset()
+        friendSprites.update()
+        enemySprites.update()
+        friendSprites.draw(screen)
+        enemySprites.draw(screen)
+        pygame.display.flip()
+    return 0
+def main():
+    playGame = False
+    score = 0
+    while not playGame:
+        playGame = initialScreen(score)
+        if not playGame:
+            score = game()
+
+ 
+if __name__ == "__main__":
+    main()
+     
+     
