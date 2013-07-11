@@ -1,0 +1,222 @@
+'''
+Created on 2013-07-10
+@author: Balwinder Singh Dhillon
+File Name: SideScroller.py
+Last Modified By: Balwinder Dhillon
+Last Date Modified: 2013-01-11
+Purpose: Create a side scroller with a bike moving against the other vehicles. Hitting other
+cars decreases the power and colloding with fuel increases the score  
+'''
+
+     
+import pygame, random
+pygame.init()
+#size of console window 
+screen = pygame.display.set_mode((640, 480))
+# adding fuel image randomly to the background
+class Fuel(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load("fuel.gif")
+        self.image = self.image.convert()
+        self.rect = self.image.get_rect()
+        self.reset()
+        self.dx = 5
+    #keeping track of the fuel image
+    def update(self):
+        self.rect.centerx += self.dx
+        if self.rect.left > screen.get_width():
+            self.reset()
+    #resetting the image when it disappears        
+    def reset(self):
+        self.rect.left = 0
+        self.rect.centery = random.randrange(0, screen.get_width())
+#handling the movements of the player on the bike 
+class Bike(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load("player.gif")
+        self.image = self.image.convert()
+        self.rect = self.image.get_rect()
+        # adding sound to the bike, collision and fuel
+        if not pygame.mixer:
+            print("problem with sound")
+        else:
+            pygame.mixer.init()
+            self.sndFuel = pygame.mixer.Sound("fuel.ogg")
+            self.sndCollision = pygame.mixer.Sound("collision.ogg")
+            self.sndEngine = pygame.mixer.Sound("engine.ogg")
+            self.sndEngine.play(-1)
+            
+    def update(self):
+        mx,my = pygame.mouse.get_pos()
+        self.rect.center = (590,my)
+
+class Car(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        #array to randomly generate four cars with different images
+        imageArray = [pygame.image.load("truck.gif"),pygame.image.load("truck1.gif"),pygame.image.load("truck1.gif"),pygame.image.load("truck3.gif")]
+        self.image = imageArray[random.randrange(0,3)]
+        self.image = self.image.convert()
+        self.rect = self.image.get_rect()
+        self.reset()
+    
+    def update(self):
+        self.rect.centerx += self.dx
+        #self.rect.centery += self.dy
+        if self.rect.left > screen.get_width():
+            self.reset()
+    #randomly creating cars at different y coordinates and moving randomly at different speed        
+    def reset(self):
+        self.rect.left = 0
+        self.rect.centery = random.randrange(0, screen.get_height())
+        self.dx = random.randrange(2,5)
+        self.dy = random.randrange(-5,10)
+#keeping track of the score when user collides with fuel image
+class Scorecard(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.health = 100
+        self.score = 0
+        self.font = pygame.font.SysFont("Lucida Console", 30)
+        
+    def update(self):
+        self.text = "Health: %d   Score: %d" % (self.health, self.score)
+        self.image = self.font.render(self.text, 1, (15, 15, 15))
+        self.rect = self.image.get_rect()
+#setting the background image of road      
+class Road(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load("road.gif")
+        self.rect = self.image.get_rect()
+        self.dy = 10
+        self.reset()
+         
+    def update(self):
+        self.rect.right += self.dy
+        if self.rect.left >= 0:
+            self.reset()
+             
+    def reset(self):
+        self.rect.right = screen.get_width()
+ 
+#initial screen when the game loads 
+def initialScreen(score):
+    pygame.display.set_caption("Super Bike")
+    road = Road()
+    bike = Bike()
+    #allSprites = pygame.sprite.Group(road)
+    allSprites = pygame.sprite.OrderedUpdates(road, bike)
+    insFont = pygame.font.SysFont("Lucida Console", 20)
+    insLabels = []
+    instructions = (
+    "",
+    "Super Bike.     Last score: %d" % score ,
+    "",
+    "Instructions: ",
+    "You are on a your Bike,",
+    "speeding on the highway.",
+    "Keep filling fuel to score points",    
+    "and avoid hitting other vehicles",
+    "",
+    "Good luck!",
+    "",
+    "click to start, escape to quit..."
+    )
+    
+    for line in instructions:
+        tempLabel = insFont.render(line, 1, (15, 15, 15))
+        insLabels.append(tempLabel)
+
+    keepGoing = True
+    clock = pygame.time.Clock()
+    pygame.mouse.set_visible(False)
+    while keepGoing:
+        clock.tick(30)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                keepGoing = False
+                playGame = True
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                keepGoing = False
+                playGame = False 
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    keepGoing = False
+                    playGame = True
+     
+        allSprites.update()
+        allSprites.draw(screen)
+        for i in range(len(insLabels)):
+            screen.blit(insLabels[i], (50, 30*i))
+
+        pygame.display.flip()
+         
+    #bike.sndEngine.stop()    
+    pygame.mouse.set_visible(True)
+    return playGame
+#when the user clicks to play the game
+def game():
+    pygame.display.set_caption("Super Bike!")
+    background = pygame.Surface(screen.get_size())
+    background.fill((0, 0, 0))
+    screen.blit(background, (0, 0))
+    # creating objects for raod, bike, cars and scoreboard
+    road = Road()
+    bike = Bike()
+    scorecard = Scorecard()
+    car = Car()
+    car1 = Car()
+    car2 = Car()
+    car3 = Car()
+    fuel = Fuel()
+    #group of the car objects
+    enemySprites = pygame.sprite.Group(car, car1, car2, car3)
+    friendSprites = pygame.sprite.OrderedUpdates(road, bike,scorecard,fuel)
+    keepGoing = True
+    clock = pygame.time.Clock()
+    pygame.mouse.set_visible(False)
+    while keepGoing:
+        clock.tick(30)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                keepGoing = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    keepGoing = False
+        #update score when player hits the fuel
+        if bike.rect.colliderect(fuel.rect):
+            bike.sndFuel.play()
+            fuel.reset()
+            scorecard.score += 100
+        #update health and play sound when player collides with the cars
+        hitCar = pygame.sprite.spritecollide(bike, enemySprites, False)
+        if hitCar:
+            bike.sndCollision.play()
+            scorecard.health -= 10
+            if scorecard.health <= 0:
+                keepGoing = False
+            for theCloud in hitCar:
+                theCloud.reset()
+        friendSprites.update()
+        enemySprites.update()
+        friendSprites.draw(screen)
+        enemySprites.draw(screen)
+        pygame.display.flip()
+    return scorecard.score
+def main():
+    #initiate the game
+    playGame = False
+    score = 0
+    while not playGame:
+        playGame = initialScreen(score)
+        if not playGame:
+            score = game()
+
+ 
+if __name__ == "__main__":
+    main()
+     
+     
